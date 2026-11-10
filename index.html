@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Booth LDR</title>
+  <meta name="description" content="Photobooth live untuk pasangan jarak jauh. Foto berdua dalam satu frame walau beda kota.">
+  <meta name="theme-color" content="#141018">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=DM+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="style.css?v=3">
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="app.js?v=3" defer></script>
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="./">Booth<span>LDR</span></a>
+    <div id="status" class="status" hidden><i></i><span id="status-text"></span></div>
+  </header>
+
+  <main>
+    <!-- BERANDA -->
+    <section id="screen-home" class="screen home" hidden>
+      <div class="home-copy">
+        <p class="eyebrow">Photobooth live untuk LDR</p>
+        <h1>Satu frame berdua, walau beda kota.</h1>
+        <p class="lead">Background kamar kalian dihapus, lalu kalian berdua muncul berdampingan di latar yang sama. Pose bareng secara live, cekrek bersamaan, jadi satu photo strip.</p>
+
+        <div class="actions">
+          <button id="btn-create" class="btn primary">Buat room</button>
+        </div>
+
+        <form id="join-form" class="join">
+          <label for="join-code">Punya kode atau link dari pasangan?</label>
+          <div class="join-row">
+            <input id="join-code" type="text" placeholder="Kode room, mis. K7Q2MX" autocomplete="off" autocapitalize="characters" spellcheck="false">
+            <button class="btn ghost" type="submit">Gabung</button>
+          </div>
+        </form>
+
+        <ol class="steps">
+          <li><b>Buat room</b> dan izinkan kamera.</li>
+          <li><b>Kirim link</b> ke pasanganmu.</li>
+          <li><b>Pilih frame dan jumlah foto</b>, atur posisi, lalu mulai.</li>
+        </ol>
+        <p class="fine">Video dikirim langsung antar perangkat kalian. Foto tidak disimpan di server mana pun.</p>
+      </div>
+
+      <div class="demo-strip" aria-hidden="true">
+        <div class="ds-frame"><i class="p1"></i><i class="p2"></i></div>
+        <div class="ds-frame"><i class="p1"></i><i class="p2"></i></div>
+        <div class="ds-frame"><i class="p1"></i><i class="p2"></i></div>
+        <div class="ds-frame"><i class="p1"></i><i class="p2"></i></div>
+        <div class="ds-foot"><b>jarak cuma angka</b><small>BOOTH LDR</small></div>
+      </div>
+    </section>
+
+    <!-- UNDANGAN -->
+    <section id="screen-invite" class="screen invite" hidden>
+      <p class="eyebrow">Kamu diundang ke room</p>
+      <h1 id="invite-code" class="code">------</h1>
+      <p class="lead">Pasanganmu sudah menunggu. Izinkan kamera dan mikrofon saat browser bertanya.</p>
+      <div class="actions">
+        <button id="btn-join" class="btn primary">Nyalakan kamera &amp; gabung</button>
+        <a class="btn ghost" href="./">Buat room sendiri</a>
+      </div>
+    </section>
+
+    <!-- BOOTH -->
+    <section id="screen-booth" class="screen booth" hidden>
+      <div id="share-bar" class="share-bar" hidden>
+        <div class="share-text">
+          <span class="label">Kirim link ini ke pasanganmu</span>
+          <input id="share-link" type="text" readonly>
+        </div>
+        <div class="share-btns">
+          <button id="btn-copy" class="btn small">Salin link</button>
+          <button id="btn-share-link" class="btn small ghost" hidden>Bagikan</button>
+        </div>
+      </div>
+
+      <div class="booth-grid">
+        <div class="stage-col">
+          <div class="stage" id="stage">
+            <canvas id="stage-canvas" width="960" height="720"></canvas>
+            <div class="seg-chip" id="seg-chip"><span id="seg-text">Menyiapkan penghapus background…</span><button id="btn-seg-retry" class="btn small" hidden>Coba lagi</button></div>
+            <div class="countdown" id="countdown" aria-live="assertive"></div>
+            <div class="flash" id="flash"></div>
+            <div class="shot-counter" id="shot-counter" hidden></div>
+            <button id="btn-unmute" class="btn small unmute" hidden>Nyalakan suara</button>
+            <button id="btn-rejoin" class="btn small rejoin" hidden>Sambung lagi</button>
+          </div>
+          <!-- sumber video (tidak ditampilkan langsung) -->
+          <video id="vid-local" class="feed" playsinline autoplay muted></video>
+          <video id="vid-remote" class="feed" playsinline autoplay></video>
+
+          <div class="pose">
+            <span class="label">Posisi kamu di frame</span>
+            <div class="pose-row">
+              <label for="pos-x">Geser</label>
+              <input id="pos-x" type="range" min="-30" max="30" step="1" value="0">
+            </div>
+            <div class="pose-row">
+              <label for="pos-s">Ukuran</label>
+              <input id="pos-s" type="range" min="60" max="150" step="1" value="100">
+            </div>
+            <button id="btn-pos-reset" class="btn link small-link">Kembalikan posisi</button>
+          </div>
+        </div>
+
+        <div class="controls">
+          <fieldset>
+            <legend>Jumlah foto</legend>
+            <div class="seg" id="seg-shots">
+              <label><input type="radio" name="shots" value="3"><span>3 foto</span></label>
+              <label><input type="radio" name="shots" value="4"><span>4 foto</span></label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Frame</legend>
+            <div class="themes" id="themes"></div>
+          </fieldset>
+
+          <div class="field">
+            <label for="caption">Tulisan di bawah strip</label>
+            <input id="caption" type="text" maxlength="40" autocomplete="off">
+          </div>
+
+          <p class="sync-note">Frame, jumlah foto, dan tulisan sama untuk kalian berdua.</p>
+
+          <button id="btn-start" class="btn primary big" disabled>Mulai foto</button>
+          <p id="start-hint" class="hint">Menunggu pasangan terhubung.</p>
+          <button id="btn-leave" class="btn link">Keluar dari room</button>
+          <p class="ver">Booth LDR v3 · satu frame</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- HASIL -->
+    <section id="screen-result" class="screen result" hidden>
+      <div class="result-strip"><img id="result-img" alt="Photo strip kalian berdua"></div>
+      <div class="result-side">
+        <p class="eyebrow">Strip kalian sudah jadi</p>
+        <h2>Simpan sebelum lupa.</h2>
+        <p class="lead small">Pasanganmu juga mendapat strip yang sama di layarnya.</p>
+        <div class="actions col">
+          <button id="btn-download" class="btn primary">Unduh PNG</button>
+          <button id="btn-share-img" class="btn ghost" hidden>Bagikan</button>
+          <button id="btn-again" class="btn ghost">Foto lagi</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="toast" class="toast" role="status" hidden></div>
+  </main>
+</body>
+</html>
